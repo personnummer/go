@@ -1,0 +1,2 @@
+# github.com/frozzare/go-assert v1.1.0
+github.com/frozzare/go-assert

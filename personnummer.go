@@ -1,15 +1,31 @@
 package personnummer
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"strconv"
+)
 
 const (
 	lengthWithoutCentury = 10
 	lengthWithCentury    = 12
 )
 
-// ValidString validate Swedish social security numbers.
-func ValidString(in string) bool {
+func toString(in interface{}) string {
+	switch v := in.(type) {
+	case int, int32, int64, uint, uint32, uint64:
+		return fmt.Sprint(v)
+	case string:
+		return v
+	default:
+		return ""
+	}
+}
+
+// getCleanNumber will return clean numbers.
+func getCleanNumber(in string) []byte {
 	cleanNumber := make([]byte, 0, len(in))
+
 	for _, c := range in {
 		if c == '+' {
 			continue
@@ -19,33 +35,16 @@ func ValidString(in string) bool {
 		}
 
 		if c > '9' {
-			return false
+			return nil
 		}
 		if c < '0' {
-			return false
+			return nil
 		}
 
 		cleanNumber = append(cleanNumber, byte(c))
 	}
 
-	switch len(cleanNumber) {
-	case lengthWithCentury:
-		if !luhn(cleanNumber[2:]) {
-			return false
-		}
-
-		dateBytes := append(cleanNumber[:6], getCoOrdinationDay(cleanNumber[6:8])...)
-		return validateTime(dateBytes)
-	case lengthWithoutCentury:
-		if !luhn(cleanNumber) {
-			return false
-		}
-
-		dateBytes := append(cleanNumber[:4], getCoOrdinationDay(cleanNumber[4:6])...)
-		return validateTime(dateBytes)
-	default:
-		return false
-	}
+	return cleanNumber
 }
 
 var monthDays = map[int]int{
@@ -88,12 +87,46 @@ func validateTime(time []byte) bool {
 }
 
 // Valid will validate Swedish social security numbers.
-func Valid(i interface{}) bool {
-	switch v := i.(type) {
-	case int, int32, int64, uint, uint32, uint64:
-		return ValidString(fmt.Sprint(v))
-	case string:
-		return ValidString(v)
+func Valid(ssn interface{}, opts ...*Options) bool {
+	str := toString(ssn)
+	if str == "" {
+		return false
+	}
+
+	cleanNumber := getCleanNumber(str)
+	if cleanNumber == nil {
+		return false
+	}
+
+	switch len(cleanNumber) {
+	case lengthWithCentury:
+		if !luhn(cleanNumber[2:]) {
+			return false
+		}
+
+		var dateBytes []byte
+
+		if len(opts) > 0 && !opts[0].CoordinatioNumber {
+			dateBytes = append(cleanNumber[:6], cleanNumber[6:8]...)
+		} else {
+			dateBytes = append(cleanNumber[:6], getCoOrdinationDay(cleanNumber[6:8])...)
+		}
+
+		return validateTime(dateBytes)
+	case lengthWithoutCentury:
+		if !luhn(cleanNumber) {
+			return false
+		}
+
+		var dateBytes []byte
+
+		if len(opts) > 0 && !opts[0].CoordinatioNumber {
+			dateBytes = append(cleanNumber[:4], cleanNumber[4:6]...)
+		} else {
+			dateBytes = append(cleanNumber[:4], getCoOrdinationDay(cleanNumber[4:6])...)
+		}
+
+		return validateTime(dateBytes)
 	default:
 		return false
 	}
@@ -150,4 +183,33 @@ func charsToDigit(chars []byte) int {
 		r += p
 	}
 	return r
+}
+
+// IsFemale checks if a Swedish social security number is for a female.
+func IsFemale(ssn interface{}, opts ...*Options) (bool, error) {
+	male, err := IsMale(ssn, opts...)
+
+	if err != nil {
+		return false, err
+	}
+
+	return !male, err
+}
+
+// IsMale checks if a Swedish social security number is for a male.
+// The second argument should be a boolean
+func IsMale(ssn interface{}, opts ...*Options) (bool, error) {
+	if !Valid(ssn, opts...) {
+		return false, errors.New("Invalid swedish social security number")
+	}
+
+	cleanNumber := getCleanNumber(toString(ssn))
+	sexDigit, _ := strconv.Atoi(string(cleanNumber[8]))
+
+	return sexDigit%2 == 1, nil
+}
+
+// Options for validation.
+type Options struct {
+	CoordinatioNumber bool
 }

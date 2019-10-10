@@ -219,3 +219,14 @@ func BenchmarkValid(b *testing.B) {
 		Valid("19900101-0017")
 	}
 }
+
+func BenchmarkFormat(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Format("900101-0017")
+	}
+}
+func BenchmarkGetAge(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		GetAge("900101-0017")
+	}
+}

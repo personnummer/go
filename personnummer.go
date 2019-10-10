@@ -295,6 +295,7 @@ func Format(ssn interface{}, opts ...*Options) (string, error) {
 	if len(opts) > 0 && opts[0].LongFormat {
 		return fmt.Sprintf("%d%s%s%s%s%s", parts.Century, addZero(parts.Year), addZero(parts.Month), addZero(parts.Date), parts.Num, parts.Check), nil
 	}
+
 	return fmt.Sprintf("%s%s%s%s%s%s", addZero(parts.Year), addZero(parts.Month), addZero(parts.Date), string(parts.Sep), parts.Num, parts.Check), nil
 }
 

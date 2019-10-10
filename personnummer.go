@@ -15,8 +15,8 @@ const (
 )
 
 var (
-	invalidSecurityNumber = errors.New("Invalid swedish social security number")
-	monthDays             = map[int]int{
+	errInvalidSecurityNumber = errors.New("Invalid swedish social security number")
+	monthDays                = map[int]int{
 		1:  31,
 		3:  31,
 		4:  30,
@@ -117,7 +117,7 @@ func getDateParts(dateBytes []byte, plus bool) (*dateParts, error) {
 
 	if month != 2 {
 		if _, ok := monthDays[month]; !ok {
-			return nil, invalidSecurityNumber
+			return nil, errInvalidSecurityNumber
 		}
 	}
 
@@ -258,7 +258,7 @@ func Valid(ssn interface{}, opts ...*Options) bool {
 // GetAge returns the age for a Swedish social security number.
 func GetAge(ssn interface{}, opts ...*Options) (int, error) {
 	if !Valid(ssn, opts...) {
-		return 0, invalidSecurityNumber
+		return 0, errInvalidSecurityNumber
 	}
 
 	str := toString(ssn)
@@ -290,7 +290,7 @@ func IsFemale(ssn interface{}, opts ...*Options) (bool, error) {
 // The second argument should be a boolean
 func IsMale(ssn interface{}, opts ...*Options) (bool, error) {
 	if !Valid(ssn, opts...) {
-		return false, invalidSecurityNumber
+		return false, errInvalidSecurityNumber
 	}
 
 	cleanNumber := getCleanNumber(toString(ssn))

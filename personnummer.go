@@ -107,7 +107,7 @@ type dateParts struct {
 	Year     int
 	Month    int
 	Date     int
-	Sep      byte
+	Sep      string
 	Num      string
 	Check    string
 }
@@ -143,23 +143,22 @@ func getDateParts(dateBytes []byte, plus bool) (*dateParts, error) {
 		Month: month,
 		Check: check,
 		Num:   num,
+		Sep:   "-",
 	}
 
 	if len(dateBytes[:length-4]) == 4 {
 		parts.FullYear = charsToDigit(dateBytes[:length-4])
 		parts.Century = charsToDigit(dateBytes[:length-4][0:2])
 		parts.Year = charsToDigit(dateBytes[:length-4][2:])
-		parts.Sep = '-'
 	} else {
 		parts.Year = charsToDigit(dateBytes[:length-4])
 
 		var baseYear int
 		if plus {
 			baseYear = now().Year() - 100
-			parts.Sep = '+'
+			parts.Sep = "+"
 		} else {
 			baseYear = now().Year()
-			parts.Sep = '-'
 		}
 
 		centuryStr := strconv.Itoa((baseYear - ((baseYear - parts.Year) % 100)))
@@ -296,7 +295,7 @@ func Format(ssn interface{}, opts ...*Options) (string, error) {
 		return fmt.Sprintf("%d%s%s%s%s%s", parts.Century, addZero(parts.Year), addZero(parts.Month), addZero(parts.Date), parts.Num, parts.Check), nil
 	}
 
-	return fmt.Sprintf("%s%s%s%s%s%s", addZero(parts.Year), addZero(parts.Month), addZero(parts.Date), string(parts.Sep), parts.Num, parts.Check), nil
+	return fmt.Sprintf("%s%s%s%s%s%s", addZero(parts.Year), addZero(parts.Month), addZero(parts.Date), parts.Sep, parts.Num, parts.Check), nil
 }
 
 // GetAge returns the age for a Swedish social security number.

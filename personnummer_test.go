@@ -76,6 +76,47 @@ func TestWrongCoOrdinationNumbers(t *testing.T) {
 	assert.False(t, Valid("640893-3231"))
 }
 
+func TestShouldFormatInputValusAsPersonnummer(t *testing.T) {
+	shortFormat := map[string]interface{}{
+		"640327-3813": 6403273813,
+		"510818-9167": "510818-9167",
+		"900101-0017": "19900101-0017",
+		"130401+2931": "19130401+2931",
+		"640823-3234": "196408233234",
+		"000101-0107": "0001010107",
+	}
+
+	for expected, input := range shortFormat {
+		v, _ := Format(input)
+		assert.Equal(t, expected, v)
+	}
+
+	longFormat := map[string]interface{}{
+		"195108189167": "510818-9167",
+		"199001010017": "19900101-0017",
+		"191304012931": "19130401+2931",
+		"196408233234": "196408233234",
+		"200001010107": "0001010107",
+		"190001010107": "000101+0107",
+	}
+
+	opt := &Options{
+		LongFormat: true,
+	}
+
+	for expected, input := range longFormat {
+		v, _ := Format(input, opt)
+		assert.Equal(t, expected, v)
+	}
+}
+
+func TestShouldNotFormatInputValueAsPersonnummer(t *testing.T) {
+	for _, n := range invalidNumbers {
+		_, err := Format(n)
+		assert.NotNil(t, err)
+	}
+}
+
 func TestGetAge(t *testing.T) {
 	now = func() time.Time {
 		return time.Date(2019, 7, 13, 01, 01, 01, 01, time.UTC)

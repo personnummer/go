@@ -33,6 +33,14 @@ var (
 	rule3 = [...]int{0, 2, 4, 6, 8, 1, 3, 5, 7, 9}
 )
 
+func addZero(d int) string {
+	if d < 10 {
+		return fmt.Sprintf("0%d", d)
+	}
+
+	return fmt.Sprint(d)
+}
+
 // charsToDigit converts char bytes to a digit
 // example: ['1', '1'] => 11
 func charsToDigit(chars []byte) int {
@@ -99,14 +107,23 @@ type dateParts struct {
 	Year     int
 	Month    int
 	Date     int
+	Sep      byte
+	Num      string
+	Check    string
 }
 
 func getDateParts(dateBytes []byte, plus bool) (*dateParts, error) {
+	var num, check string
+
 	switch len(dateBytes) {
 	case lengthWithCentury:
+		num = string(dateBytes[8:11])
+		check = string(dateBytes[11:])
 		dateBytes = dateBytes[2:8]
 		break
 	case lengthWithoutCentury:
+		num = string(dateBytes[6:9])
+		check = string(dateBytes[9:])
 		dateBytes = dateBytes[0:6]
 		break
 	}
@@ -124,20 +141,25 @@ func getDateParts(dateBytes []byte, plus bool) (*dateParts, error) {
 	parts := &dateParts{
 		Date:  date,
 		Month: month,
+		Check: check,
+		Num:   num,
 	}
 
 	if len(dateBytes[:length-4]) == 4 {
 		parts.FullYear = charsToDigit(dateBytes[:length-4])
 		parts.Century = charsToDigit(dateBytes[:length-4][0:2])
 		parts.Year = charsToDigit(dateBytes[:length-4][2:])
+		parts.Sep = '-'
 	} else {
 		parts.Year = charsToDigit(dateBytes[:length-4])
 
 		var baseYear int
 		if plus {
 			baseYear = now().Year() - 100
+			parts.Sep = '+'
 		} else {
 			baseYear = now().Year()
+			parts.Sep = '-'
 		}
 
 		centuryStr := strconv.Itoa((baseYear - ((baseYear - parts.Year) % 100)))
@@ -255,6 +277,27 @@ func Valid(ssn interface{}, opts ...*Options) bool {
 	}
 }
 
+// Format a Swedish social security number as one of the official formats,
+// a long format or a short format.
+func Format(ssn interface{}, opts ...*Options) (string, error) {
+	if !Valid(ssn, opts...) {
+		return "", errInvalidSecurityNumber
+	}
+
+	str := toString(ssn)
+	cleanNumber := getCleanNumber(str)
+
+	parts, err := getDateParts(cleanNumber, strings.Contains(str, "+"))
+	if err != nil {
+		return "", err
+	}
+
+	if len(opts) > 0 && opts[0].LongFormat {
+		return fmt.Sprintf("%d%s%s%s%s%s", parts.Century, addZero(parts.Year), addZero(parts.Month), addZero(parts.Date), parts.Num, parts.Check), nil
+	}
+	return fmt.Sprintf("%s%s%s%s%s%s", addZero(parts.Year), addZero(parts.Month), addZero(parts.Date), string(parts.Sep), parts.Num, parts.Check), nil
+}
+
 // GetAge returns the age for a Swedish social security number.
 func GetAge(ssn interface{}, opts ...*Options) (int, error) {
 	if !Valid(ssn, opts...) {
@@ -302,4 +345,5 @@ func IsMale(ssn interface{}, opts ...*Options) (bool, error) {
 // Options for validation.
 type Options struct {
 	CoordinatioNumber bool
+	LongFormat        bool
 }

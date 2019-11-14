@@ -8,43 +8,32 @@ import (
 )
 
 var invalidNumbers = []interface{}{
+	nil,
 	[]string{},
 	[]int{},
 	true,
 	false,
-	1122334455,
-	"112233-4455",
+	0,
 	"19112233-4455",
+	"20112233-4455",
 	"9999999999",
 	"199999999999",
-	"9913131315",
-	"9911311232",
-	"9902291237",
-	"19990919_3766",
-	"990919_3766",
 	"199909193776",
 	"Just a string",
-	"990919+3776",
-	"990919-3776",
-	"9909193776",
 }
 
 func TestPersonnummerWithControlDigit(t *testing.T) {
-	assert.True(t, Valid(6403273813))
-	assert.True(t, Valid("510818-9167"))
-	assert.True(t, Valid("19900101-0017"))
-	assert.True(t, Valid("19130401+2931"))
-	assert.True(t, Valid("196408233234"))
-	assert.True(t, Valid("0001010107"))
-	assert.True(t, Valid("000101-0107"))
-	assert.True(t, Valid("200002296127"))
+	assert.True(t, Valid(8507099805))
+	assert.True(t, Valid("198507099805"))
+	assert.True(t, Valid("198507099813"))
+	assert.True(t, Valid("850709-9813"))
+	assert.True(t, Valid("196411139808"))
 }
 
 func TestPersonnummerWithoutControlDigit(t *testing.T) {
-	assert.False(t, Valid(640327381))
-	assert.False(t, Valid("510818-916"))
-	assert.False(t, Valid("19900101-001"))
-	assert.False(t, Valid("100101+001"))
+	assert.False(t, Valid("19850709980"))
+	assert.False(t, Valid("19850709981"))
+	assert.False(t, Valid("19641113980"))
 }
 
 func TestPersonnummerWithWrongPersonnummerOrTypes(t *testing.T) {
@@ -53,37 +42,27 @@ func TestPersonnummerWithWrongPersonnummerOrTypes(t *testing.T) {
 	}
 }
 
-func TestLeapYear(t *testing.T) {
-	assert.True(t, Valid("20000229-0005"))  // Divisible by 400
-	assert.False(t, Valid("19000229-0005")) // Divisible by 100
-	assert.True(t, Valid("20080229-0007"))  // Divisible by 4
-	assert.False(t, Valid("20090229-0006")) // Not divisible by
-}
-
 func TestCoOrdinationNumbers(t *testing.T) {
-	assert.True(t, Valid("701063-2391"))
-	assert.True(t, Valid("640883-3231"))
-	assert.False(t, Valid("701063-2391", &Options{
+	assert.True(t, Valid("198507699802"))
+	assert.True(t, Valid("850769-9802"))
+	assert.True(t, Valid("198507699810"))
+	assert.True(t, Valid("850769-9810"))
+	assert.False(t, Valid("198507699802", &Options{
 		CoordinatioNumber: false,
 	}))
-	assert.False(t, Valid("640883-3231", &Options{
+	assert.False(t, Valid("198507699810", &Options{
 		CoordinatioNumber: false,
 	}))
 }
 
 func TestWrongCoOrdinationNumbers(t *testing.T) {
-	assert.False(t, Valid("900161-0017"))
-	assert.False(t, Valid("640893-3231"))
+	assert.False(t, Valid("198567099805"))
 }
 
 func TestShouldFormatInputValusAsPersonnummer(t *testing.T) {
 	shortFormat := map[string]interface{}{
-		"640327-3813": 6403273813,
-		"510818-9167": "510818-9167",
-		"900101-0017": "19900101-0017",
-		"130401+2931": "19130401+2931",
-		"640823-3234": "196408233234",
-		"000101-0107": "0001010107",
+		"850709-9805": "19850709-9805",
+		"850709-9813": "198507099813",
 	}
 
 	for expected, input := range shortFormat {
@@ -92,12 +71,8 @@ func TestShouldFormatInputValusAsPersonnummer(t *testing.T) {
 	}
 
 	longFormat := map[string]interface{}{
-		"195108189167": "510818-9167",
-		"199001010017": "19900101-0017",
-		"191304012931": "19130401+2931",
-		"196408233234": "196408233234",
-		"200001010107": "0001010107",
-		"190001010107": "000101+0107",
+		"198507099805": "19850709-9805",
+		"198507099813": "198507099813",
 	}
 
 	opt := &Options{
@@ -122,20 +97,17 @@ func TestGetAge(t *testing.T) {
 		return time.Date(2019, 7, 13, 01, 01, 01, 01, time.UTC)
 	}
 
-	age, _ := GetAge(6403273813)
-	assert.Equal(t, 55, age)
+	age, _ := GetAge("198507099805")
+	assert.Equal(t, 34, age)
 
-	age, _ = GetAge("510818-9167")
-	assert.Equal(t, 67, age)
+	age, _ = GetAge("198507099813")
+	assert.Equal(t, 34, age)
 
-	age, _ = GetAge("19900101-0017")
-	assert.Equal(t, 29, age)
+	age, _ = GetAge("196411139808")
+	assert.Equal(t, 54, age)
 
-	age, _ = GetAge("19130401+2931")
+	age, _ = GetAge("19121212+1212")
 	assert.Equal(t, 106, age)
-
-	age, _ = GetAge("200002296127")
-	assert.Equal(t, 19, age)
 }
 
 func TestGetAgeWithCoOrdinationNumbers(t *testing.T) {
@@ -143,11 +115,11 @@ func TestGetAgeWithCoOrdinationNumbers(t *testing.T) {
 		return time.Date(2019, 7, 13, 01, 01, 01, 01, time.UTC)
 	}
 
-	age, _ := GetAge("701063-2391")
-	assert.Equal(t, 48, age)
+	age, _ := GetAge("198507699810")
+	assert.Equal(t, 34, age)
 
-	age, _ = GetAge("640883-3231")
-	assert.Equal(t, 54, age)
+	age, _ = GetAge("198507699802")
+	assert.Equal(t, 34, age)
 }
 
 func TestGetAgeExcludeCoOrdinationNumbers(t *testing.T) {
@@ -155,13 +127,13 @@ func TestGetAgeExcludeCoOrdinationNumbers(t *testing.T) {
 		return time.Date(2019, 7, 13, 01, 01, 01, 01, time.UTC)
 	}
 
-	age, err := GetAge("701063-2391", &Options{
+	age, err := GetAge("198507699810", &Options{
 		CoordinatioNumber: false,
 	})
 	assert.Equal(t, 0, age)
 	assert.NotNil(t, err)
 
-	age, err = GetAge("640883-3231", &Options{
+	age, err = GetAge("198507699802", &Options{
 		CoordinatioNumber: false,
 	})
 	assert.Equal(t, 0, age)
@@ -169,38 +141,38 @@ func TestGetAgeExcludeCoOrdinationNumbers(t *testing.T) {
 }
 
 func TestSex(t *testing.T) {
-	valid, _ := IsMale(6403273813, &Options{
+	valid, _ := IsMale(8507099813, &Options{
 		CoordinatioNumber: false,
 	})
 	assert.True(t, valid)
 
-	valid, _ = IsFemale(6403273813, &Options{
+	valid, _ = IsFemale(198507099813, &Options{
 		CoordinatioNumber: false,
 	})
 	assert.False(t, valid)
 
-	valid, _ = IsFemale("510818-9167", &Options{
+	valid, _ = IsFemale("198507099805", &Options{
 		CoordinatioNumber: false,
 	})
 	assert.True(t, valid)
 
-	valid, _ = IsMale("510818-9167", &Options{
+	valid, _ = IsMale("198507099805", &Options{
 		CoordinatioNumber: false,
 	})
 	assert.False(t, valid)
 }
 
 func TestSexWithCoOrdinationNumbers(t *testing.T) {
-	valid, _ := IsMale("701063-2391")
+	valid, _ := IsMale("198507099813")
 	assert.True(t, valid)
 
-	valid, _ = IsFemale("701063-2391")
+	valid, _ = IsFemale("198507099813")
 	assert.False(t, valid)
 
-	valid, _ = IsFemale("640883-3223")
+	valid, _ = IsFemale("198507699802")
 	assert.True(t, valid)
 
-	valid, _ = IsMale("640883-3223")
+	valid, _ = IsMale("198507699802")
 	assert.False(t, valid)
 }
 
@@ -216,17 +188,17 @@ func TestSexInvalidNumbers(t *testing.T) {
 
 func BenchmarkValid(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		Valid("19900101-0017")
+		Valid("198507099805")
 	}
 }
 
 func BenchmarkFormat(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		Format("900101-0017")
+		Format("850709-9805")
 	}
 }
 func BenchmarkGetAge(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		GetAge("900101-0017")
+		GetAge("198507099805")
 	}
 }

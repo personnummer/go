@@ -336,8 +336,14 @@ func IsMale(ssn interface{}, opts ...*Options) (bool, error) {
 		return false, errInvalidSecurityNumber
 	}
 
-	cleanNumber := getCleanNumber(toString(ssn))
-	sexDigit, _ := strconv.Atoi(string(cleanNumber[8]))
+	str := toString(ssn)
+	cleanNumber := getCleanNumber(str)
+	parts, err := getDateParts(cleanNumber, strings.Contains(str, "+"))
+	if err != nil {
+		return false, err
+	}
+
+	sexDigit := parts.Num[2]
 
 	return sexDigit%2 == 1, nil
 }

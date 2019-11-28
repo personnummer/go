@@ -18,18 +18,15 @@ import (
 )
 
 func main() {
-	personnummer.Valid(6403273813)
-	//=> true
-	
-	personnummer.Valid("19900101-0017")
-	//=> true
-	
-	// works with co-ordination numbers
-	personnummer.Valid("701063-2391")
+	personnummer.Valid(8507099805)
 	//=> true
 
-	personnummer.Valid("510818-916")
-	//=> false
+	personnummer.Valid("198507099805")
+	//=> true
+
+	// works with co-ordination numbers
+	personnummer.Valid("198507699802")
+	//=> true
 }
 ```
 

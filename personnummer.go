@@ -33,14 +33,6 @@ var (
 	rule3 = [...]int{0, 2, 4, 6, 8, 1, 3, 5, 7, 9}
 )
 
-func addZero(d int) string {
-	if d < 10 {
-		return fmt.Sprintf("0%d", d)
-	}
-
-	return fmt.Sprint(d)
-}
-
 // charsToDigit converts char bytes to a digit
 // example: ['1', '1'] => 11
 func charsToDigit(chars []byte) int {
@@ -100,82 +92,6 @@ func getCoOrdinationDay(day []byte) []byte {
 	}
 }
 
-type dateParts struct {
-	LeapYear bool
-	FullYear int
-	Century  int
-	Year     int
-	Month    int
-	Date     int
-	Sep      string
-	Num      string
-	Check    string
-}
-
-func getDateParts(dateBytes []byte, plus bool) (*dateParts, error) {
-	var num, check string
-
-	switch len(dateBytes) {
-	case lengthWithCentury:
-		num = string(dateBytes[8:11])
-		check = string(dateBytes[11:])
-		dateBytes = dateBytes[2:8]
-		break
-	case lengthWithoutCentury:
-		num = string(dateBytes[6:9])
-		check = string(dateBytes[9:])
-		dateBytes = dateBytes[0:6]
-		break
-	}
-
-	length := len(dateBytes)
-	date := charsToDigit(dateBytes[length-2 : length])
-	month := charsToDigit(dateBytes[length-4 : length-2])
-
-	if month != 2 {
-		if _, ok := monthDays[month]; !ok {
-			return nil, errInvalidSecurityNumber
-		}
-	}
-
-	parts := &dateParts{
-		Date:  date,
-		Month: month,
-		Check: check,
-		Num:   num,
-		Sep:   "-",
-	}
-
-	if len(dateBytes[:length-4]) == 4 {
-		parts.FullYear = charsToDigit(dateBytes[:length-4])
-		parts.Century = charsToDigit(dateBytes[:length-4][0:2])
-		parts.Year = charsToDigit(dateBytes[:length-4][2:])
-	} else {
-		parts.Year = charsToDigit(dateBytes[:length-4])
-
-		var baseYear int
-		if plus {
-			baseYear = now().Year() - 100
-			parts.Sep = "+"
-		} else {
-			baseYear = now().Year()
-		}
-
-		centuryStr := strconv.Itoa((baseYear - ((baseYear - parts.Year) % 100)))
-		century, err := strconv.Atoi(centuryStr[0:2])
-		if err != nil {
-			return nil, err
-		}
-
-		parts.Century = century
-		parts.FullYear = charsToDigit(append([]byte(centuryStr[0:2]), dateBytes[:length-4]...))
-	}
-
-	parts.LeapYear = parts.Year%4 == 0 && parts.Year%100 != 0 || parts.Year%400 == 0
-
-	return parts, nil
-}
-
 // luhn will test if the given string is a valid luhn string.
 func luhn(s []byte) bool {
 	odd := len(s) & 1
@@ -230,97 +146,173 @@ func validateTime(time []byte) bool {
 	return date <= 28
 }
 
-// Valid will validate Swedish social security numbers.
-func Valid(ssn interface{}, opts ...*Options) bool {
-	str := toString(ssn)
-	if str == "" {
-		return false
+// Personnummer represents the personnummer struct.
+type Personnummer struct {
+	Age                string
+	Century            string
+	FullYear           string
+	Year               string
+	Month              string
+	Day                string
+	Sep                string
+	Num                string
+	Check              string
+	leapYear           bool
+	coordinationNumber bool
+}
+
+// Options represents the personnummer options.
+type Options struct {
+}
+
+// New parse a Swedish social security numbers and returns a new struct or a error.
+func New(ssn string, options ...*Options) (*Personnummer, error) {
+	p := &Personnummer{}
+
+	if err := p.parse(ssn); err != nil {
+		return nil, err
 	}
 
-	cleanNumber := getCleanNumber(str)
-	if cleanNumber == nil {
-		return false
+	return p, nil
+}
+
+// parse Swedish social security numbers and set struct properpties or return a error.
+func (p *Personnummer) parse(ssn string) error {
+	var num, check string
+
+	if ssn == "" {
+		return errInvalidSecurityNumber
 	}
 
-	switch len(cleanNumber) {
+	dateBytes := getCleanNumber(ssn)
+
+	if len(dateBytes) == 0 || len(dateBytes) < 8 {
+		return errInvalidSecurityNumber
+	}
+
+	plus := strings.Contains(ssn, "+")
+
+	switch len(dateBytes) {
 	case lengthWithCentury:
-		if !luhn(cleanNumber[2:]) {
-			return false
-		}
-
-		var dateBytes []byte
-
-		if len(opts) > 0 && !opts[0].CoordinatioNumber {
-			dateBytes = append(cleanNumber[:6], cleanNumber[6:8]...)
-		} else {
-			dateBytes = append(cleanNumber[:6], getCoOrdinationDay(cleanNumber[6:8])...)
-		}
-
-		return validateTime(dateBytes)
+		num = string(dateBytes[8:11])
+		check = string(dateBytes[11:])
+		dateBytes = dateBytes[2:8]
+		break
 	case lengthWithoutCentury:
-		if !luhn(cleanNumber) {
-			return false
+		num = string(dateBytes[6:9])
+		check = string(dateBytes[9:])
+		dateBytes = dateBytes[0:6]
+		break
+	}
+
+	length := len(dateBytes)
+	day := charsToDigit(dateBytes[length-2 : length])
+	month := charsToDigit(dateBytes[length-4 : length-2])
+
+	if month != 2 {
+		if _, ok := monthDays[month]; !ok {
+			return errInvalidSecurityNumber
 		}
+	}
 
-		var dateBytes []byte
+	p.Check = check
+	p.Num = num
+	p.Sep = "-"
 
-		if len(opts) > 0 && !opts[0].CoordinatioNumber {
-			dateBytes = append(cleanNumber[:4], cleanNumber[4:6]...)
+	if day < 10 {
+		p.Day = fmt.Sprintf("0%d", day)
+	} else {
+		p.Day = toString(day)
+	}
+
+	if month < 10 {
+		p.Month = fmt.Sprintf("0%d", month)
+	} else {
+		p.Month = toString(month)
+	}
+
+	year := 0
+	fullYear := 0
+
+	if len(dateBytes[:length-4]) == 4 {
+		fullYear = charsToDigit(dateBytes[:length-4])
+		p.Century = string(dateBytes[:length-4][0:2])
+		year = charsToDigit(dateBytes[:length-4][2:])
+	} else {
+		year = charsToDigit(dateBytes[:length-4])
+
+		var baseYear int
+		if plus {
+			baseYear = now().Year() - 100
+			p.Sep = "+"
 		} else {
-			dateBytes = append(cleanNumber[:4], getCoOrdinationDay(cleanNumber[4:6])...)
+			baseYear = now().Year()
 		}
 
-		return validateTime(dateBytes)
-	default:
+		centuryStr := strconv.Itoa((baseYear - ((baseYear - year) % 100)))
+		century, err := strconv.Atoi(centuryStr[0:2])
+		if err != nil {
+			return err
+		}
+
+		p.Century = toString(century)
+		fullYear = charsToDigit(append([]byte(centuryStr[0:2]), dateBytes[:length-4]...))
+	}
+
+	p.leapYear = year%4 == 0 && year%100 != 0 || year%400 == 0
+	p.Year = toString(year)
+	p.FullYear = toString(fullYear)
+
+	ageDay := day
+	if ageDay >= 61 && ageDay < 91 {
+		p.coordinationNumber = true
+		ageDay = ageDay - 60
+	}
+
+	t := time.Date(fullYear, time.Month(month), ageDay, 0, 0, 0, 0, time.UTC)
+	age := math.Floor(float64(now().Sub(t).Milliseconds()) / 3.15576e+10)
+	p.Age = fmt.Sprintf("%.0f", age)
+
+	if !p.valid() {
+		return errInvalidSecurityNumber
+	}
+
+	return nil
+}
+
+// Valid will validate Swedish social security numbers.
+func (p *Personnummer) valid() bool {
+	ssn := fmt.Sprintf("%s%s%s%s%s%s", p.Century, p.Year, p.Month, p.Day, p.Num, p.Check)
+
+	bytes := []byte(ssn)
+	if !luhn(bytes[2:]) {
 		return false
 	}
+
+	var dateBytes = append(bytes[:6], getCoOrdinationDay(bytes[6:8])...)
+
+	return validateTime(dateBytes)
 }
 
 // Format a Swedish social security number as one of the official formats,
 // a long format or a short format.
-func Format(ssn interface{}, opts ...*Options) (string, error) {
-	if !Valid(ssn, opts...) {
-		return "", errInvalidSecurityNumber
+func (p *Personnummer) Format(longFormat ...bool) (string, error) {
+	if len(longFormat) > 0 && longFormat[0] {
+		return fmt.Sprintf("%s%s%s%s%s%s", p.Century, p.Year, p.Month, p.Day, p.Num, p.Check), nil
 	}
 
-	str := toString(ssn)
-	cleanNumber := getCleanNumber(str)
-
-	parts, err := getDateParts(cleanNumber, strings.Contains(str, "+"))
-	if err != nil {
-		return "", err
-	}
-
-	if len(opts) > 0 && opts[0].LongFormat {
-		return fmt.Sprintf("%d%s%s%s%s%s", parts.Century, addZero(parts.Year), addZero(parts.Month), addZero(parts.Date), parts.Num, parts.Check), nil
-	}
-
-	return fmt.Sprintf("%s%s%s%s%s%s", addZero(parts.Year), addZero(parts.Month), addZero(parts.Date), parts.Sep, parts.Num, parts.Check), nil
+	return fmt.Sprintf("%s%s%s%s%s%s", p.Year, p.Month, p.Day, p.Sep, p.Num, p.Check), nil
 }
 
-// GetAge returns the age for a Swedish social security number.
-func GetAge(ssn interface{}, opts ...*Options) (int, error) {
-	if !Valid(ssn, opts...) {
-		return 0, errInvalidSecurityNumber
-	}
-
-	str := toString(ssn)
-	cleanNumber := getCleanNumber(str)
-
-	parts, err := getDateParts(cleanNumber, strings.Contains(str, "+"))
-	if err != nil {
-		return 0, err
-	}
-
-	t := time.Date(parts.FullYear, time.Month(parts.Month), parts.Date, 0, 0, 0, 0, time.UTC)
-	age := math.Floor(now().Sub(t).Hours() / 24 / 365)
-
-	return int(age), nil
+// Check if a Swedish social security number is a coordination number or not.
+// Returns true if it's a coordination number.
+func (p *Personnummer) IsCoordinationNumber() bool {
+	return p.coordinationNumber
 }
 
 // IsFemale checks if a Swedish social security number is for a female.
-func IsFemale(ssn interface{}, opts ...*Options) (bool, error) {
-	male, err := IsMale(ssn, opts...)
+func (p *Personnummer) IsFemale() (bool, error) {
+	male, err := p.IsMale()
 
 	if err != nil {
 		return false, err
@@ -331,25 +323,19 @@ func IsFemale(ssn interface{}, opts ...*Options) (bool, error) {
 
 // IsMale checks if a Swedish social security number is for a male.
 // The second argument should be a boolean
-func IsMale(ssn interface{}, opts ...*Options) (bool, error) {
-	if !Valid(ssn, opts...) {
-		return false, errInvalidSecurityNumber
-	}
-
-	str := toString(ssn)
-	cleanNumber := getCleanNumber(str)
-	parts, err := getDateParts(cleanNumber, strings.Contains(str, "+"))
-	if err != nil {
-		return false, err
-	}
-
-	sexDigit := parts.Num[2]
+func (p *Personnummer) IsMale() (bool, error) {
+	sexDigit := int(p.Num[2])
 
 	return sexDigit%2 == 1, nil
 }
 
-// Options for validation.
-type Options struct {
-	CoordinatioNumber bool
-	LongFormat        bool
+// Valid will validate Swedish social security numbers
+func Valid(ssn string, options ...*Options) bool {
+	_, err := Parse(ssn, options...)
+	return err == nil
+}
+
+// Parse Swedish social security numbers and return a new struct.
+func Parse(ssn string, options ...*Options) (*Personnummer, error) {
+	return New(ssn, options...)
 }

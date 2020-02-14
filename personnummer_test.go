@@ -1,6 +1,7 @@
 package personnummer
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -23,7 +24,7 @@ var invalidNumbers = []interface{}{
 }
 
 func TestPersonnummerWithControlDigit(t *testing.T) {
-	assert.True(t, Valid(8507099805))
+	assert.True(t, Valid("8507099805"))
 	assert.True(t, Valid("198507099805"))
 	assert.True(t, Valid("198507099813"))
 	assert.True(t, Valid("850709-9813"))
@@ -38,167 +39,148 @@ func TestPersonnummerWithoutControlDigit(t *testing.T) {
 
 func TestPersonnummerWithWrongPersonnummerOrTypes(t *testing.T) {
 	for _, n := range invalidNumbers {
-		assert.False(t, Valid(n))
+		assert.False(t, Valid(fmt.Sprintf("%v", n)))
 	}
 }
 
-func TestCoOrdinationNumbers(t *testing.T) {
+func TestCoordinationNumbers(t *testing.T) {
 	assert.True(t, Valid("198507699802"))
 	assert.True(t, Valid("850769-9802"))
 	assert.True(t, Valid("198507699810"))
 	assert.True(t, Valid("850769-9810"))
-	assert.False(t, Valid("198507699802", &Options{
-		CoordinatioNumber: false,
-	}))
-	assert.False(t, Valid("198507699810", &Options{
-		CoordinatioNumber: false,
-	}))
+	assert.True(t, Valid("198507699802"))
+	assert.True(t, Valid("198507699810"))
 }
 
 func TestWrongCoOrdinationNumbers(t *testing.T) {
 	assert.False(t, Valid("198567099805"))
 }
 
+func TestCoordinationNumbersCheck(t *testing.T) {
+	p, _ := Parse("198507699802")
+	assert.True(t, p.IsCoordinationNumber())
+}
+
+func TestShouldParsePersonnummer(t *testing.T) {
+	p, _ := Parse("198507699802")
+	assert.Equal(t, "34", p.Age)
+	assert.Equal(t, "19", p.Century)
+	assert.Equal(t, "1985", p.FullYear)
+	assert.Equal(t, "85", p.Year)
+	assert.Equal(t, "07", p.Month)
+	assert.Equal(t, "69", p.Day)
+	assert.Equal(t, "-", p.Sep)
+	assert.Equal(t, "980", p.Num)
+	assert.Equal(t, "2", p.Check)
+}
+
+func TestShouldThrowErrorForBadInputsWhenParsing(t *testing.T) {
+	for _, n := range invalidNumbers {
+		_, e := Parse(fmt.Sprintf("%v", n))
+		assert.NotNil(t, e)
+	}
+}
+
 func TestShouldFormatInputValusAsPersonnummer(t *testing.T) {
-	shortFormat := map[string]interface{}{
+	shortFormat := map[string]string{
 		"850709-9805": "19850709-9805",
 		"850709-9813": "198507099813",
 	}
 
 	for expected, input := range shortFormat {
-		v, _ := Format(input)
+		p, _ := Parse(input)
+		v, _ := p.Format()
 		assert.Equal(t, expected, v)
 	}
 
-	longFormat := map[string]interface{}{
+	longFormat := map[string]string{
 		"198507099805": "19850709-9805",
 		"198507099813": "198507099813",
 	}
 
-	opt := &Options{
-		LongFormat: true,
-	}
-
 	for expected, input := range longFormat {
-		v, _ := Format(input, opt)
+		p, _ := Parse(input)
+		v, _ := p.Format(true)
 		assert.Equal(t, expected, v)
 	}
 }
 
+/*
 func TestShouldNotFormatInputValueAsPersonnummer(t *testing.T) {
 	for _, n := range invalidNumbers {
 		_, err := Format(n)
 		assert.NotNil(t, err)
 	}
 }
-
+*/
 func TestGetAge(t *testing.T) {
 	now = func() time.Time {
-		return time.Date(2019, 7, 13, 01, 01, 01, 01, time.UTC)
+		return time.Date(2019, 7, 13, 0, 0, 0, 0, time.UTC)
 	}
 
-	age, _ := GetAge("198507099805")
-	assert.Equal(t, 34, age)
+	p, _ := Parse("198507099805")
+	assert.Equal(t, "34", p.Age)
 
-	age, _ = GetAge("198507099813")
-	assert.Equal(t, 34, age)
+	p, _ = Parse("198507099813")
+	assert.Equal(t, "34", p.Age)
 
-	age, _ = GetAge("196411139808")
-	assert.Equal(t, 54, age)
+	p, _ = Parse("196411139808")
+	assert.Equal(t, "54", p.Age)
 
-	age, _ = GetAge("19121212+1212")
-	assert.Equal(t, 106, age)
+	p, _ = Parse("19121212+1212")
+	assert.Equal(t, "106", p.Age)
 }
 
 func TestGetAgeWithCoOrdinationNumbers(t *testing.T) {
 	now = func() time.Time {
-		return time.Date(2019, 7, 13, 01, 01, 01, 01, time.UTC)
+		return time.Date(2019, 7, 13, 0, 0, 0, 0, time.UTC)
 	}
 
-	age, _ := GetAge("198507699810")
-	assert.Equal(t, 34, age)
+	p, _ := Parse("198507699810")
+	assert.Equal(t, "34", p.Age)
 
-	age, _ = GetAge("198507699802")
-	assert.Equal(t, 34, age)
-}
-
-func TestGetAgeExcludeCoOrdinationNumbers(t *testing.T) {
-	now = func() time.Time {
-		return time.Date(2019, 7, 13, 01, 01, 01, 01, time.UTC)
-	}
-
-	age, err := GetAge("198507699810", &Options{
-		CoordinatioNumber: false,
-	})
-	assert.Equal(t, 0, age)
-	assert.NotNil(t, err)
-
-	age, err = GetAge("198507699802", &Options{
-		CoordinatioNumber: false,
-	})
-	assert.Equal(t, 0, age)
-	assert.NotNil(t, err)
+	p, _ = Parse("198507699802")
+	assert.Equal(t, "34", p.Age)
 }
 
 func TestSex(t *testing.T) {
-	valid, _ := IsMale(8507099813, &Options{
-		CoordinatioNumber: false,
-	})
-	assert.True(t, valid)
+	p, _ := Parse("8507099813")
+	v, _ := p.IsMale()
+	assert.True(t, v)
 
-	valid, _ = IsFemale(198507099813, &Options{
-		CoordinatioNumber: false,
-	})
-	assert.False(t, valid)
+	p, _ = Parse("198507099813")
+	v, _ = p.IsFemale()
+	assert.False(t, v)
 
-	valid, _ = IsFemale("198507099805", &Options{
-		CoordinatioNumber: false,
-	})
-	assert.True(t, valid)
+	p, _ = Parse("198507099805")
+	v, _ = p.IsFemale()
+	assert.True(t, v)
 
-	valid, _ = IsMale("198507099805", &Options{
-		CoordinatioNumber: false,
-	})
-	assert.False(t, valid)
+	p, _ = Parse("198507099805")
+	v, _ = p.IsMale()
+	assert.False(t, v)
 }
 
 func TestSexWithCoOrdinationNumbers(t *testing.T) {
-	valid, _ := IsMale("198507099813")
-	assert.True(t, valid)
+	p, _ := Parse("198507099813")
+	v, _ := p.IsMale()
+	assert.True(t, v)
 
-	valid, _ = IsFemale("198507099813")
-	assert.False(t, valid)
+	p, _ = Parse("198507099813")
+	v, _ = p.IsFemale()
+	assert.False(t, v)
 
-	valid, _ = IsFemale("198507699802")
-	assert.True(t, valid)
+	p, _ = Parse("198507699802")
+	v, _ = p.IsFemale()
+	assert.True(t, v)
 
-	valid, _ = IsMale("198507699802")
-	assert.False(t, valid)
-}
-
-func TestSexInvalidNumbers(t *testing.T) {
-	for _, n := range invalidNumbers {
-		_, err := IsMale(n)
-		assert.NotNil(t, err)
-
-		_, err = IsFemale(n)
-		assert.NotNil(t, err)
-	}
+	p, _ = Parse("198507699802")
+	v, _ = p.IsMale()
+	assert.False(t, v)
 }
 
 func BenchmarkValid(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Valid("198507099805")
-	}
-}
-
-func BenchmarkFormat(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		Format("850709-9805")
-	}
-}
-func BenchmarkGetAge(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		GetAge("198507099805")
 	}
 }

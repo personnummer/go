@@ -270,7 +270,7 @@ func (p *Personnummer) parse(ssn string) error {
 	}
 
 	t := time.Date(fullYear, time.Month(month), ageDay, 0, 0, 0, 0, time.UTC)
-	age := math.Floor(float64(now().Sub(t).Milliseconds()) / 3.15576e+10)
+	age := math.Floor(float64(now().Sub(t)/1e6) / 3.15576e+10)
 	p.Age = fmt.Sprintf("%.0f", age)
 
 	if !p.valid() {

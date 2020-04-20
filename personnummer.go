@@ -148,7 +148,6 @@ func validateTime(time []byte) bool {
 
 // Personnummer represents the personnummer struct.
 type Personnummer struct {
-	Age                string
 	Century            string
 	FullYear           string
 	Year               string
@@ -178,7 +177,7 @@ func New(ssn string, options ...*Options) (*Personnummer, error) {
 
 // parse Swedish social security numbers and set struct properpties or return a error.
 func (p *Personnummer) parse(ssn string) error {
-	var num, check string
+	var century, year, num, check string
 
 	if ssn == "" {
 		return errInvalidSecurityNumber
@@ -194,11 +193,14 @@ func (p *Personnummer) parse(ssn string) error {
 
 	switch len(dateBytes) {
 	case lengthWithCentury:
+		century = string(dateBytes[0:2])
+		year = string(dateBytes[2:4])
 		num = string(dateBytes[8:11])
 		check = string(dateBytes[11:])
 		dateBytes = dateBytes[2:8]
 		break
 	case lengthWithoutCentury:
+		year = string(dateBytes[0:2])
 		num = string(dateBytes[6:9])
 		check = string(dateBytes[9:])
 		dateBytes = dateBytes[0:6]
@@ -215,31 +217,17 @@ func (p *Personnummer) parse(ssn string) error {
 		}
 	}
 
+	p.Century = century
+	p.Year = year
+	p.FullYear = toString(century + year)
 	p.Check = check
 	p.Num = num
 	p.Sep = "-"
+	p.Day = toString(fmt.Sprintf("%02d", day))
+	p.Month = toString(fmt.Sprintf("%02d", month))
 
-	if day < 10 {
-		p.Day = fmt.Sprintf("0%d", day)
-	} else {
-		p.Day = toString(day)
-	}
-
-	if month < 10 {
-		p.Month = fmt.Sprintf("0%d", month)
-	} else {
-		p.Month = toString(month)
-	}
-
-	year := 0
-	fullYear := 0
-
-	if len(dateBytes[:length-4]) == 4 {
-		fullYear = charsToDigit(dateBytes[:length-4])
-		p.Century = string(dateBytes[:length-4][0:2])
-		year = charsToDigit(dateBytes[:length-4][2:])
-	} else {
-		year = charsToDigit(dateBytes[:length-4])
+	if p.Century == "" {
+		year := charsToDigit(dateBytes[:length-4])
 
 		var baseYear int
 		if plus {
@@ -256,22 +244,29 @@ func (p *Personnummer) parse(ssn string) error {
 		}
 
 		p.Century = toString(century)
-		fullYear = charsToDigit(append([]byte(centuryStr[0:2]), dateBytes[:length-4]...))
+		p.FullYear = toString(p.Century + p.Year)
+	} else {
+		fullYear, err := strconv.Atoi(century + year)
+		if err != nil {
+			return err
+		}
+
+		if now().Year()-fullYear < 100 {
+			p.Sep = "-"
+		} else {
+			p.Sep = "+"
+		}
 	}
 
-	p.leapYear = year%4 == 0 && year%100 != 0 || year%400 == 0
-	p.Year = toString(year)
-	p.FullYear = toString(fullYear)
-
-	ageDay := day
+	/*ageDay := day
 	if ageDay >= 61 && ageDay < 91 {
 		p.coordinationNumber = true
 		ageDay = ageDay - 60
-	}
+	}*/
 
-	t := time.Date(fullYear, time.Month(month), ageDay, 0, 0, 0, 0, time.UTC)
-	age := math.Floor(float64(now().Sub(t)/1e6) / 3.15576e+10)
-	p.Age = fmt.Sprintf("%.0f", age)
+	//t := time.Date(fullYear, time.Month(month), ageDay, 0, 0, 0, 0, time.UTC)
+	//age := math.Floor(float64(now().Sub(t)/1e6) / 3.15576e+10)
+	//p.Age = fmt.Sprintf("%.0f", age)
 
 	if !p.valid() {
 		return errInvalidSecurityNumber
@@ -304,29 +299,40 @@ func (p *Personnummer) Format(longFormat ...bool) (string, error) {
 	return fmt.Sprintf("%s%s%s%s%s%s", p.Year, p.Month, p.Day, p.Sep, p.Num, p.Check), nil
 }
 
-// Check if a Swedish social security number is a coordination number or not.
+// GetAge returns the age from a Swedish social security number.
+func (p *Personnummer) GetAge() int {
+	ageDay := charsToDigit([]byte(p.Day))
+
+	if p.IsCoordinationNumber() {
+		ageDay = ageDay - 60
+	}
+
+	fullYear := charsToDigit([]byte(p.FullYear))
+	month := charsToDigit([]byte(p.Month))
+
+	t := time.Date(fullYear, time.Month(month), ageDay, 0, 0, 0, 0, time.UTC)
+	a := math.Floor(float64(now().Sub(t)/1e6) / 3.15576e+10)
+
+	return int(a)
+}
+
+// IsCoordinationNumber determine if a Swedish social security number is a coordination number or not.
 // Returns true if it's a coordination number.
 func (p *Personnummer) IsCoordinationNumber() bool {
 	return p.coordinationNumber
 }
 
 // IsFemale checks if a Swedish social security number is for a female.
-func (p *Personnummer) IsFemale() (bool, error) {
-	male, err := p.IsMale()
-
-	if err != nil {
-		return false, err
-	}
-
-	return !male, err
+func (p *Personnummer) IsFemale() bool {
+	return !p.IsMale()
 }
 
 // IsMale checks if a Swedish social security number is for a male.
 // The second argument should be a boolean
-func (p *Personnummer) IsMale() (bool, error) {
+func (p *Personnummer) IsMale() bool {
 	sexDigit := int(p.Num[2])
 
-	return sexDigit%2 == 1, nil
+	return sexDigit%2 == 1
 }
 
 // Valid will validate Swedish social security numbers

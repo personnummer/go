@@ -2,181 +2,151 @@ package personnummer
 
 import (
 	"fmt"
+	"log"
+	"math"
+	"os"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/frozzare/go-assert"
+	"github.com/frozzare/go/http2"
 )
 
-var invalidNumbers = []interface{}{
-	nil,
-	[]string{},
-	[]int{},
-	true,
-	false,
-	0,
-	"19112233-4455",
-	"20112233-4455",
-	"9999999999",
-	"199999999999",
-	"199909193776",
-	"Just a string",
+type TestListItem struct {
+	Integer         int    `json:"integer"`
+	LongFormat      string `json:"long_format"`
+	ShortFormat     string `json:"short_format"`
+	SeparatedFormat string `json:"separated_format"`
+	SeparatedLong   string `json:"separated_long"`
+	Valid           bool   `json:"valid"`
+	Type            string `json:"type"`
+	IsMale          bool   `json:"isMale"`
+	IsFemale        bool   `json:"isFemale"`
 }
 
-func TestPersonnummerWithControlDigit(t *testing.T) {
-	assert.True(t, Valid("8507099805"))
-	assert.True(t, Valid("198507099805"))
-	assert.True(t, Valid("198507099813"))
-	assert.True(t, Valid("850709-9813"))
-	assert.True(t, Valid("196411139808"))
+func (t *TestListItem) Get(key string) string {
+	switch key {
+	case "integer":
+		return fmt.Sprintf("%d", t.Integer)
+	case "long_format":
+		return t.LongFormat
+	case "short_format":
+		return t.ShortFormat
+	case "separated_format":
+		return t.SeparatedFormat
+	case "separated_long":
+		return t.SeparatedLong
+	default:
+		break
+	}
+	return ""
 }
 
-func TestPersonnummerWithoutControlDigit(t *testing.T) {
-	assert.False(t, Valid("19850709980"))
-	assert.False(t, Valid("19850709981"))
-	assert.False(t, Valid("19641113980"))
+var availableListFormats = []string{
+	"integer",
+	"long_format",
+	"short_format",
+	"separated_format",
+	"separated_long",
 }
 
-func TestPersonnummerWithWrongPersonnummerOrTypes(t *testing.T) {
-	for _, n := range invalidNumbers {
-		assert.False(t, Valid(fmt.Sprintf("%v", n)))
+var testList []*TestListItem
+
+func TestMain(m *testing.M) {
+	if err := http2.GetJSON("https://raw.githubusercontent.com/personnummer/meta/master/testdata/list.json", &testList); err != nil {
+		log.Fatal(err)
+	}
+
+	code := m.Run()
+	os.Exit(code)
+}
+
+func TestPersonnummerList(t *testing.T) {
+	for _, item := range testList {
+		for _, format := range availableListFormats {
+			assert.Equal(t, item.Valid, Valid(item.Get(format)))
+		}
 	}
 }
 
-func TestCoordinationNumbers(t *testing.T) {
-	assert.True(t, Valid("198507699802"))
-	assert.True(t, Valid("850769-9802"))
-	assert.True(t, Valid("198507699810"))
-	assert.True(t, Valid("850769-9810"))
-	assert.True(t, Valid("198507699802"))
-	assert.True(t, Valid("198507699810"))
-}
+func TestPersonnummerFormat(t *testing.T) {
+	for _, item := range testList {
+		if !item.Valid {
+			continue
+		}
 
-func TestWrongCoOrdinationNumbers(t *testing.T) {
-	assert.False(t, Valid("198567099805"))
-}
+		for _, format := range availableListFormats {
+			if format == "short_format" && strings.Contains(item.SeparatedFormat, "+") {
+				continue
+			}
 
-func TestCoordinationNumbersCheck(t *testing.T) {
-	p, _ := Parse("198507699802")
-	assert.True(t, p.IsCoordinationNumber())
-}
+			p, _ := New(item.Get(format))
+			v1, _ := p.Format()
+			assert.Equal(t, item.SeparatedFormat, v1)
 
-func TestShouldParsePersonnummer(t *testing.T) {
-	p, _ := Parse("198507699802")
-	assert.Equal(t, "34", p.Age)
-	assert.Equal(t, "19", p.Century)
-	assert.Equal(t, "1985", p.FullYear)
-	assert.Equal(t, "85", p.Year)
-	assert.Equal(t, "07", p.Month)
-	assert.Equal(t, "69", p.Day)
-	assert.Equal(t, "-", p.Sep)
-	assert.Equal(t, "980", p.Num)
-	assert.Equal(t, "2", p.Check)
-}
-
-func TestShouldThrowErrorForBadInputsWhenParsing(t *testing.T) {
-	for _, n := range invalidNumbers {
-		_, e := Parse(fmt.Sprintf("%v", n))
-		assert.NotNil(t, e)
+			v2, _ := p.Format(true)
+			assert.Equal(t, item.LongFormat, v2)
+		}
 	}
 }
 
-func TestShouldFormatInputValusAsPersonnummer(t *testing.T) {
-	shortFormat := map[string]string{
-		"850709-9805": "19850709-9805",
-		"850709-9813": "198507099813",
-	}
+func TestPersonnummerError(t *testing.T) {
+	for _, item := range testList {
+		if item.Valid {
+			continue
+		}
 
-	for expected, input := range shortFormat {
-		p, _ := Parse(input)
-		v, _ := p.Format()
-		assert.Equal(t, expected, v)
-	}
-
-	longFormat := map[string]string{
-		"198507099805": "19850709-9805",
-		"198507099813": "198507099813",
-	}
-
-	for expected, input := range longFormat {
-		p, _ := Parse(input)
-		v, _ := p.Format(true)
-		assert.Equal(t, expected, v)
+		for _, format := range availableListFormats {
+			_, err := Parse(item.Get(format))
+			assert.NotNil(t, err)
+		}
 	}
 }
 
-/*
-func TestShouldNotFormatInputValueAsPersonnummer(t *testing.T) {
-	for _, n := range invalidNumbers {
-		_, err := Format(n)
-		assert.NotNil(t, err)
+func TestPersonnummerSex(t *testing.T) {
+	for _, item := range testList {
+		if !item.Valid {
+			continue
+		}
+
+		for _, format := range availableListFormats {
+			p, _ := Parse(item.Get(format))
+			assert.Equal(t, item.IsMale, p.IsMale())
+			assert.Equal(t, item.IsFemale, p.IsFemale())
+		}
 	}
 }
-*/
-func TestGetAge(t *testing.T) {
-	now = func() time.Time {
-		return time.Date(2019, 7, 13, 0, 0, 0, 0, time.UTC)
+
+func TestPersonnummerAge(t *testing.T) {
+	for _, item := range testList {
+		if !item.Valid {
+			continue
+		}
+
+		year := item.SeparatedLong[0:4]
+		month := item.SeparatedLong[4:6]
+		day := item.SeparatedLong[6:8]
+
+		if item.Type == "con" {
+			nDay, _ := strconv.Atoi(day)
+			nDay = nDay - 60
+			day = fmt.Sprintf("%02d", nDay)
+		}
+
+		tt, _ := time.Parse("2006-01-02", fmt.Sprintf("%s-%s-%s", year, month, day))
+		a := math.Floor(float64(now().Sub(tt)/1e6) / 3.15576e+10)
+
+		for _, format := range availableListFormats {
+			if format == "short_format" && strings.Contains(item.SeparatedFormat, "+") {
+				continue
+			}
+
+			p, _ := Parse(item.Get(format))
+			assert.Equal(t, a, p.GetAge())
+		}
 	}
-
-	p, _ := Parse("198507099805")
-	assert.Equal(t, "34", p.Age)
-
-	p, _ = Parse("198507099813")
-	assert.Equal(t, "34", p.Age)
-
-	p, _ = Parse("196411139808")
-	assert.Equal(t, "54", p.Age)
-
-	p, _ = Parse("19121212+1212")
-	assert.Equal(t, "106", p.Age)
-}
-
-func TestGetAgeWithCoOrdinationNumbers(t *testing.T) {
-	now = func() time.Time {
-		return time.Date(2019, 7, 13, 0, 0, 0, 0, time.UTC)
-	}
-
-	p, _ := Parse("198507699810")
-	assert.Equal(t, "34", p.Age)
-
-	p, _ = Parse("198507699802")
-	assert.Equal(t, "34", p.Age)
-}
-
-func TestSex(t *testing.T) {
-	p, _ := Parse("8507099813")
-	v, _ := p.IsMale()
-	assert.True(t, v)
-
-	p, _ = Parse("198507099813")
-	v, _ = p.IsFemale()
-	assert.False(t, v)
-
-	p, _ = Parse("198507099805")
-	v, _ = p.IsFemale()
-	assert.True(t, v)
-
-	p, _ = Parse("198507099805")
-	v, _ = p.IsMale()
-	assert.False(t, v)
-}
-
-func TestSexWithCoOrdinationNumbers(t *testing.T) {
-	p, _ := Parse("198507099813")
-	v, _ := p.IsMale()
-	assert.True(t, v)
-
-	p, _ = Parse("198507099813")
-	v, _ = p.IsFemale()
-	assert.False(t, v)
-
-	p, _ = Parse("198507699802")
-	v, _ = p.IsFemale()
-	assert.True(t, v)
-
-	p, _ = Parse("198507699802")
-	v, _ = p.IsMale()
-	assert.False(t, v)
 }
 
 func BenchmarkValid(b *testing.B) {

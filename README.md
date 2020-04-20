@@ -18,9 +18,6 @@ import (
 )
 
 func main() {
-	personnummer.Valid(8507099805)
-	//=> true
-
 	personnummer.Valid("198507099805")
 	//=> true
 

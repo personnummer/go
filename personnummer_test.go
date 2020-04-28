@@ -133,6 +133,8 @@ func TestPersonnummerAge(t *testing.T) {
 			nDay, _ := strconv.Atoi(day)
 			nDay = nDay - 60
 			day = fmt.Sprintf("%02d", nDay)
+			p, _ := Parse(item.SeparatedLong)
+			assert.Equal(t, true, p.IsCoordinationNumber())
 		}
 
 		tt, _ := time.Parse("2006-01-02", fmt.Sprintf("%s-%s-%s", year, month, day))

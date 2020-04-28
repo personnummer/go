@@ -309,7 +309,14 @@ func (p *Personnummer) GetAge() int {
 // IsCoordinationNumber determine if a Swedish personal identity number is a coordination number or not.
 // Returns true if it's a coordination number.
 func (p *Personnummer) IsCoordinationNumber() bool {
-	return p.coordinationNumber
+	day := charsToDigit([]byte(p.Day)) - 60
+	str := fmt.Sprintf("%s%s%s", p.Century, p.Year, p.Month)
+	if day < 10 {
+		str += fmt.Sprintf("0%d", day)
+	} else {
+		str += fmt.Sprintf("%d", day)
+	}
+	return validateTime([]byte(str))
 }
 
 // IsFemale checks if a Swedish personal identity number is for a female.

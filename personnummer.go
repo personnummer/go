@@ -15,7 +15,7 @@ const (
 )
 
 var (
-	errInvalidSecurityNumber = errors.New("Invalid swedish social security number")
+	errInvalidSecurityNumber = errors.New("Invalid swedish personal identity number")
 	monthDays                = map[int]int{
 		1:  31,
 		3:  31,
@@ -164,7 +164,7 @@ type Personnummer struct {
 type Options struct {
 }
 
-// New parse a Swedish social security numbers and returns a new struct or a error.
+// New parse a Swedish personal identity numbers and returns a new struct or a error.
 func New(ssn string, options ...*Options) (*Personnummer, error) {
 	p := &Personnummer{}
 
@@ -175,7 +175,7 @@ func New(ssn string, options ...*Options) (*Personnummer, error) {
 	return p, nil
 }
 
-// parse Swedish social security numbers and set struct properpties or return a error.
+// parse Swedish personal identity numbers and set struct properpties or return a error.
 func (p *Personnummer) parse(ssn string) error {
 	var century, year, num, check string
 
@@ -275,7 +275,7 @@ func (p *Personnummer) parse(ssn string) error {
 	return nil
 }
 
-// Valid will validate Swedish social security numbers.
+// Valid will validate Swedish personal identity numbers.
 func (p *Personnummer) valid() bool {
 	ssn := fmt.Sprintf("%s%s%s%s%s%s", p.Century, p.Year, p.Month, p.Day, p.Num, p.Check)
 
@@ -289,7 +289,7 @@ func (p *Personnummer) valid() bool {
 	return validateTime(dateBytes)
 }
 
-// Format a Swedish social security number as one of the official formats,
+// Format a Swedish personal identity number as one of the official formats,
 // a long format or a short format.
 func (p *Personnummer) Format(longFormat ...bool) (string, error) {
 	if len(longFormat) > 0 && longFormat[0] {
@@ -299,7 +299,7 @@ func (p *Personnummer) Format(longFormat ...bool) (string, error) {
 	return fmt.Sprintf("%s%s%s%s%s%s", p.Year, p.Month, p.Day, p.Sep, p.Num, p.Check), nil
 }
 
-// GetAge returns the age from a Swedish social security number.
+// GetAge returns the age from a Swedish personal identity number.
 func (p *Personnummer) GetAge() int {
 	ageDay := charsToDigit([]byte(p.Day))
 
@@ -316,18 +316,18 @@ func (p *Personnummer) GetAge() int {
 	return int(a)
 }
 
-// IsCoordinationNumber determine if a Swedish social security number is a coordination number or not.
+// IsCoordinationNumber determine if a Swedish personal identity number is a coordination number or not.
 // Returns true if it's a coordination number.
 func (p *Personnummer) IsCoordinationNumber() bool {
 	return p.coordinationNumber
 }
 
-// IsFemale checks if a Swedish social security number is for a female.
+// IsFemale checks if a Swedish personal identity number is for a female.
 func (p *Personnummer) IsFemale() bool {
 	return !p.IsMale()
 }
 
-// IsMale checks if a Swedish social security number is for a male.
+// IsMale checks if a Swedish personal identity number is for a male.
 // The second argument should be a boolean
 func (p *Personnummer) IsMale() bool {
 	sexDigit := int(p.Num[2])
@@ -335,13 +335,13 @@ func (p *Personnummer) IsMale() bool {
 	return sexDigit%2 == 1
 }
 
-// Valid will validate Swedish social security numbers
+// Valid will validate Swedish personal identity numbers
 func Valid(ssn string, options ...*Options) bool {
 	_, err := Parse(ssn, options...)
 	return err == nil
 }
 
-// Parse Swedish social security numbers and return a new struct.
+// Parse Swedish personal identity numbers and return a new struct.
 func Parse(ssn string, options ...*Options) (*Personnummer, error) {
 	return New(ssn, options...)
 }

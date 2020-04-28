@@ -258,16 +258,6 @@ func (p *Personnummer) parse(pin string) error {
 		}
 	}
 
-	/*ageDay := day
-	if ageDay >= 61 && ageDay < 91 {
-		p.coordinationNumber = true
-		ageDay = ageDay - 60
-	}*/
-
-	//t := time.Date(fullYear, time.Month(month), ageDay, 0, 0, 0, 0, time.UTC)
-	//age := math.Floor(float64(now().Sub(t)/1e6) / 3.15576e+10)
-	//p.Age = fmt.Sprintf("%.0f", age)
-
 	if !p.valid() {
 		return errInvalidSecurityNumber
 	}

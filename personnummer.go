@@ -165,10 +165,10 @@ type Options struct {
 }
 
 // New parse a Swedish personal identity numbers and returns a new struct or a error.
-func New(ssn string, options ...*Options) (*Personnummer, error) {
+func New(pin string, options ...*Options) (*Personnummer, error) {
 	p := &Personnummer{}
 
-	if err := p.parse(ssn); err != nil {
+	if err := p.parse(pin); err != nil {
 		return nil, err
 	}
 
@@ -176,20 +176,20 @@ func New(ssn string, options ...*Options) (*Personnummer, error) {
 }
 
 // parse Swedish personal identity numbers and set struct properpties or return a error.
-func (p *Personnummer) parse(ssn string) error {
+func (p *Personnummer) parse(pin string) error {
 	var century, year, num, check string
 
-	if ssn == "" {
+	if pin == "" {
 		return errInvalidSecurityNumber
 	}
 
-	dateBytes := getCleanNumber(ssn)
+	dateBytes := getCleanNumber(pin)
 
 	if len(dateBytes) == 0 || len(dateBytes) < 8 {
 		return errInvalidSecurityNumber
 	}
 
-	plus := strings.Contains(ssn, "+")
+	plus := strings.Contains(pin, "+")
 
 	switch len(dateBytes) {
 	case lengthWithCentury:
@@ -277,9 +277,9 @@ func (p *Personnummer) parse(ssn string) error {
 
 // Valid will validate Swedish personal identity numbers.
 func (p *Personnummer) valid() bool {
-	ssn := fmt.Sprintf("%s%s%s%s%s%s", p.Century, p.Year, p.Month, p.Day, p.Num, p.Check)
+	pin := fmt.Sprintf("%s%s%s%s%s%s", p.Century, p.Year, p.Month, p.Day, p.Num, p.Check)
 
-	bytes := []byte(ssn)
+	bytes := []byte(pin)
 	if !luhn(bytes[2:]) {
 		return false
 	}
@@ -336,12 +336,12 @@ func (p *Personnummer) IsMale() bool {
 }
 
 // Valid will validate Swedish personal identity numbers
-func Valid(ssn string, options ...*Options) bool {
-	_, err := Parse(ssn, options...)
+func Valid(pin string, options ...*Options) bool {
+	_, err := Parse(pin, options...)
 	return err == nil
 }
 
 // Parse Swedish personal identity numbers and return a new struct.
-func Parse(ssn string, options ...*Options) (*Personnummer, error) {
-	return New(ssn, options...)
+func Parse(pin string, options ...*Options) (*Personnummer, error) {
+	return New(pin, options...)
 }

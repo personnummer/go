@@ -20,10 +20,6 @@ import (
 func main() {
 	personnummer.Valid("198507099805")
 	//=> true
-
-	// works with co-ordination numbers
-	personnummer.Valid("198507699802")
-	//=> true
 }
 ```
 

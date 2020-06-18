@@ -207,6 +207,10 @@ func (p *Personnummer) parse(pin string) error {
 		break
 	}
 
+	if num == "000" {
+		return errInvalidSecurityNumber
+	}
+
 	length := len(dateBytes)
 	day := charsToDigit(dateBytes[length-2 : length])
 	month := charsToDigit(dateBytes[length-4 : length-2])

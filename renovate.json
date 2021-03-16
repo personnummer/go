@@ -3,6 +3,7 @@
     "config:base",
     ":preserveSemverRanges"
   ],
+  "includeForks": true,
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],

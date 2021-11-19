@@ -6,7 +6,6 @@ import (
 	"math"
 	"os"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -78,7 +77,7 @@ func TestPersonnummerFormat(t *testing.T) {
 		}
 
 		for _, format := range availableListFormats {
-			if format == "short_format" && strings.Contains(item.SeparatedFormat, "+") {
+			if format == "short_format" {
 				continue
 			}
 
@@ -141,7 +140,7 @@ func TestPersonnummerAge(t *testing.T) {
 		a := math.Floor(float64(now().Sub(tt)/1e6) / 3.15576e+10)
 
 		for _, format := range availableListFormats {
-			if format == "short_format" && strings.Contains(item.SeparatedFormat, "+") {
+			if format == "short_format" {
 				continue
 			}
 

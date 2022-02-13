@@ -5,7 +5,7 @@ Validate Swedish personal identity numbers.
 ## Installation
 
 ```
-go get -u github.com/personnummer/go
+go get -u github.com/personnummer/go/v3
 ```
 
 ## Example
@@ -14,7 +14,7 @@ go get -u github.com/personnummer/go
 package main
 
 import (
-	personnummer "github.com/personnummer/go"
+	personnummer "github.com/personnummer/go/v3"
 )
 
 func main() {

@@ -52,9 +52,14 @@ var availableListFormats = []string{
 }
 
 var testList []*TestListItem
+var interimList []*TestListItem
 
 func TestMain(m *testing.M) {
 	if err := http2.GetJSON("https://raw.githubusercontent.com/personnummer/meta/master/testdata/list.json", &testList); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := http2.GetJSON("https://raw.githubusercontent.com/personnummer/meta/master/testdata/interim.json", &interimList); err != nil {
 		log.Fatal(err)
 	}
 
@@ -181,8 +186,46 @@ func TestPersonnummerAge(t *testing.T) {
 	}
 }
 
+func TestInterimNumbers(t *testing.T) {
+	for _, item := range interimList {
+		if !item.Valid {
+			continue
+		}
+
+		for _, format := range availableListFormats {
+			if format == "integer" {
+				continue
+			}
+
+			p, _ := New(item.Get(format), &Options{AllowInterimNumber: true})
+			v1, _ := p.Format()
+			assert.Equal(t, item.SeparatedFormat, v1)
+
+			v2, _ := p.Format(true)
+			assert.Equal(t, item.LongFormat, v2)
+		}
+	}
+}
+
+func TestInterimNumbersInvalid(t *testing.T) {
+	for _, item := range interimList {
+		if item.Valid {
+			continue
+		}
+
+		for _, format := range availableListFormats {
+			if format == "integer" {
+				continue
+			}
+
+			_, err := New(item.Get(format), &Options{AllowInterimNumber: true})
+			assert.NotNil(t, err)
+		}
+	}
+}
+
 func BenchmarkValid(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		Valid("198507099805")
+		Valid(testList[0].LongFormat)
 	}
 }

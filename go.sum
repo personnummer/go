@@ -2,7 +2,3 @@ github.com/frozzare/go v1.0.0 h1:aMEQSDLZ9RRodFq03p9eFi10Oxg4YNek29a0ul86tc4=
 github.com/frozzare/go v1.0.0/go.mod h1:aF04gf7/Kbc1nTC3XyPCgWEBIpnRjhsGQ1aj4bCVxxk=
 github.com/frozzare/go-assert v1.1.0 h1:JaWK+Q2bFyVyE8dpUNtqh0P9CFAwtQhTiKZiwJ8R+Mc=
 github.com/frozzare/go-assert v1.1.0/go.mod h1:qaUtLVkASIEqsHEn8xhGKLh+24s1y07Y88Z5mNyHgWU=
-github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
-github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
-github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
-gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=

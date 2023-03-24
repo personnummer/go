@@ -293,8 +293,8 @@ func (p *Personnummer) Format(longFormat ...bool) (string, error) {
 	return fmt.Sprintf("%s%s%s%s%s%s", p.Year, p.Month, p.Day, p.Sep, p.Num, p.Check), nil
 }
 
-// GetAge returns the age from a Swedish personal identity number.
-func (p *Personnummer) GetAge() int {
+// GetDate returns the date from a Swedish personal identity number.
+func (p *Personnummer) GetDate() time.Time {
 	ageDay := charsToDigit([]byte(p.Day))
 
 	if p.IsCoordinationNumber() {
@@ -304,7 +304,12 @@ func (p *Personnummer) GetAge() int {
 	fullYear := charsToDigit([]byte(p.FullYear))
 	month := charsToDigit([]byte(p.Month))
 
-	t := time.Date(fullYear, time.Month(month), ageDay, 0, 0, 0, 0, time.UTC)
+	return time.Date(fullYear, time.Month(month), ageDay, 0, 0, 0, 0, time.UTC)
+}
+
+// GetAge returns the age from a Swedish personal identity number.
+func (p *Personnummer) GetAge() int {
+	t := p.GetDate()
 	a := math.Floor(float64(now().Sub(t)/1e6) / 3.15576e+10)
 
 	return int(a)

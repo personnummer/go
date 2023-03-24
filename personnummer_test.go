@@ -118,6 +118,37 @@ func TestPersonnummerSex(t *testing.T) {
 	}
 }
 
+func TestPersonnummerDate(t *testing.T) {
+	for _, item := range testList {
+		if !item.Valid {
+			continue
+		}
+
+		year := item.SeparatedLong[0:4]
+		month := item.SeparatedLong[4:6]
+		day := item.SeparatedLong[6:8]
+
+		if item.Type == "con" {
+			nDay, _ := strconv.Atoi(day)
+			nDay = nDay - 60
+			day = fmt.Sprintf("%02d", nDay)
+			p, _ := Parse(item.SeparatedLong)
+			assert.Equal(t, true, p.IsCoordinationNumber())
+		}
+
+		tt, _ := time.Parse("2006-01-02", fmt.Sprintf("%s-%s-%s", year, month, day))
+
+		for _, format := range availableListFormats {
+			if format == "short_format" {
+				continue
+			}
+
+			p, _ := Parse(item.Get(format))
+			assert.Equal(t, tt, p.GetDate())
+		}
+	}
+}
+
 func TestPersonnummerAge(t *testing.T) {
 	for _, item := range testList {
 		if !item.Valid {

@@ -52,9 +52,14 @@ var availableListFormats = []string{
 }
 
 var testList []*TestListItem
+var interimList []*TestListItem
 
 func TestMain(m *testing.M) {
 	if err := http2.GetJSON("https://raw.githubusercontent.com/personnummer/meta/master/testdata/list.json", &testList); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := http2.GetJSON("https://raw.githubusercontent.com/personnummer/meta/master/testdata/interim.json", &interimList); err != nil {
 		log.Fatal(err)
 	}
 
@@ -118,6 +123,37 @@ func TestPersonnummerSex(t *testing.T) {
 	}
 }
 
+func TestPersonnummerDate(t *testing.T) {
+	for _, item := range testList {
+		if !item.Valid {
+			continue
+		}
+
+		year := item.SeparatedLong[0:4]
+		month := item.SeparatedLong[4:6]
+		day := item.SeparatedLong[6:8]
+
+		if item.Type == "con" {
+			nDay, _ := strconv.Atoi(day)
+			nDay = nDay - 60
+			day = fmt.Sprintf("%02d", nDay)
+			p, _ := Parse(item.SeparatedLong)
+			assert.Equal(t, true, p.IsCoordinationNumber())
+		}
+
+		tt, _ := time.Parse("2006-01-02", fmt.Sprintf("%s-%s-%s", year, month, day))
+
+		for _, format := range availableListFormats {
+			if format == "short_format" {
+				continue
+			}
+
+			p, _ := Parse(item.Get(format))
+			assert.Equal(t, tt, p.GetDate())
+		}
+	}
+}
+
 func TestPersonnummerAge(t *testing.T) {
 	for _, item := range testList {
 		if !item.Valid {
@@ -150,8 +186,46 @@ func TestPersonnummerAge(t *testing.T) {
 	}
 }
 
+func TestInterimNumbers(t *testing.T) {
+	for _, item := range interimList {
+		if !item.Valid {
+			continue
+		}
+
+		for _, format := range availableListFormats {
+			if format == "integer" {
+				continue
+			}
+
+			p, _ := New(item.Get(format), &Options{AllowInterimNumber: true})
+			v1, _ := p.Format()
+			assert.Equal(t, item.SeparatedFormat, v1)
+
+			v2, _ := p.Format(true)
+			assert.Equal(t, item.LongFormat, v2)
+		}
+	}
+}
+
+func TestInterimNumbersInvalid(t *testing.T) {
+	for _, item := range interimList {
+		if item.Valid {
+			continue
+		}
+
+		for _, format := range availableListFormats {
+			if format == "integer" {
+				continue
+			}
+
+			_, err := New(item.Get(format), &Options{AllowInterimNumber: true})
+			assert.NotNil(t, err)
+		}
+	}
+}
+
 func BenchmarkValid(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		Valid("198507099805")
+		Valid(testList[0].LongFormat)
 	}
 }

@@ -1,6 +1,6 @@
 module github.com/personnummer/go/v3
 
-go 1.19
+go 1.20
 
 require (
 	github.com/frozzare/go v1.0.0

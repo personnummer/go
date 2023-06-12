@@ -224,6 +224,11 @@ func TestInterimNumbersInvalid(t *testing.T) {
 	}
 }
 
+func TestLuhn(t *testing.T) {
+	assert.True(t, luhn([]byte("1212121212")))
+	assert.False(t, luhn([]byte("12120111X3")))
+}
+
 func BenchmarkValid(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Valid(testList[0].LongFormat)

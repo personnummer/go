@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const (
@@ -106,6 +107,12 @@ func getCoOrdinationDay(day []byte) []byte {
 
 // luhn will test if the given string is a valid luhn string.
 func luhn(s []byte) bool {
+	for _, c := range s {
+		if !unicode.IsNumber(rune(c)) {
+			return false
+		}
+	}
+
 	odd := len(s) & 1
 
 	var sum int

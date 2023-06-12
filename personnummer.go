@@ -211,12 +211,6 @@ func (p *Personnummer) parse(pin string, options *Options) error {
 
 	dateBytes := getCleanNumber(pin)
 
-	if len(dateBytes) == 0 || len(dateBytes) < 8 {
-		return errInvalidSecurityNumber
-	}
-
-	plus := strings.Contains(pin, "+")
-
 	switch len(dateBytes) {
 	case lengthWithCentury:
 		century = string(dateBytes[0:2])
@@ -231,6 +225,8 @@ func (p *Personnummer) parse(pin string, options *Options) error {
 		check = string(dateBytes[9:])
 		dateBytes = dateBytes[0:6]
 		break
+	default:
+		return errInvalidSecurityNumber
 	}
 
 	if num == "000" {
@@ -246,6 +242,8 @@ func (p *Personnummer) parse(pin string, options *Options) error {
 			return errInvalidSecurityNumber
 		}
 	}
+
+	plus := strings.Contains(pin, "+")
 
 	p.Century = century
 	p.Year = year

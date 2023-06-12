@@ -229,6 +229,13 @@ func TestLuhn(t *testing.T) {
 	assert.False(t, luhn([]byte("12120111X3")))
 }
 
+func TestInvalidLengths(t *testing.T) {
+	numbers := []string{"", "1", "12", "123", "1234", "12345", "123456", "12345678", "123456789", "1234567891", "12345678911", "123456789111", "1234567891111"}
+	for _, n := range numbers {
+		assert.False(t, Valid(n))
+	}
+}
+
 func BenchmarkValid(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Valid(testList[0].LongFormat)

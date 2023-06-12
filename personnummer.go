@@ -211,7 +211,7 @@ func (p *Personnummer) parse(pin string, options *Options) error {
 
 	dateBytes := getCleanNumber(pin)
 
-	if len(dateBytes) == 0 || len(dateBytes) < 8 {
+	if len(dateBytes) == 0 || len(dateBytes) < 8 || len(dateBytes) == 11 {
 		return errInvalidSecurityNumber
 	}
 

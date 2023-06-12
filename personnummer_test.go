@@ -229,6 +229,10 @@ func TestLuhn(t *testing.T) {
 	assert.False(t, luhn([]byte("12120111X3")))
 }
 
+func TestYear(t *testing.T) {
+	assert.False(t, Valid("19000011111"))
+}
+
 func BenchmarkValid(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		Valid(testList[0].LongFormat)

@@ -55,11 +55,11 @@ var testList []*TestListItem
 var interimList []*TestListItem
 
 func TestMain(m *testing.M) {
-	if err := http2.GetJSON("https://raw.githubusercontent.com/personnummer/meta/master/testdata/list.json", &testList); err != nil {
+	if err := http2.GetJSON("https://raw.githubusercontent.com/personnummer/meta/HEAD/testdata/list.json", &testList); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := http2.GetJSON("https://raw.githubusercontent.com/personnummer/meta/master/testdata/interim.json", &interimList); err != nil {
+	if err := http2.GetJSON("https://raw.githubusercontent.com/personnummer/meta/HEAD/testdata/interim.json", &interimList); err != nil {
 		log.Fatal(err)
 	}
 

@@ -1,16 +1,15 @@
 package personnummer
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
+	"net/http"
 	"os"
 	"strconv"
 	"testing"
 	"time"
-
-	"github.com/frozzare/go-assert"
-	"github.com/frozzare/go/http2"
 )
 
 type TestListItem struct {
@@ -51,15 +50,34 @@ var availableListFormats = []string{
 	"separated_long",
 }
 
+func getJSON(url string, v any) error {
+	res, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("GET %s: %s", url, res.Status)
+	}
+	return json.NewDecoder(res.Body).Decode(v)
+}
+
+func assertEqual[T comparable](t *testing.T, expected, actual T) {
+	t.Helper()
+	if expected != actual {
+		t.Errorf("expected %v, got %v", expected, actual)
+	}
+}
+
 var testList []*TestListItem
 var interimList []*TestListItem
 
 func TestMain(m *testing.M) {
-	if err := http2.GetJSON("https://raw.githubusercontent.com/personnummer/meta/HEAD/testdata/list.json", &testList); err != nil {
+	if err := getJSON("https://raw.githubusercontent.com/personnummer/meta/HEAD/testdata/list.json", &testList); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := http2.GetJSON("https://raw.githubusercontent.com/personnummer/meta/HEAD/testdata/interim.json", &interimList); err != nil {
+	if err := getJSON("https://raw.githubusercontent.com/personnummer/meta/HEAD/testdata/interim.json", &interimList); err != nil {
 		log.Fatal(err)
 	}
 
@@ -70,7 +88,7 @@ func TestMain(m *testing.M) {
 func TestPersonnummerList(t *testing.T) {
 	for _, item := range testList {
 		for _, format := range availableListFormats {
-			assert.Equal(t, item.Valid, Valid(item.Get(format)))
+			assertEqual(t, item.Valid, Valid(item.Get(format)))
 		}
 	}
 }
@@ -88,10 +106,10 @@ func TestPersonnummerFormat(t *testing.T) {
 
 			p, _ := New(item.Get(format))
 			v1, _ := p.Format()
-			assert.Equal(t, item.SeparatedFormat, v1)
+			assertEqual(t, item.SeparatedFormat, v1)
 
 			v2, _ := p.Format(true)
-			assert.Equal(t, item.LongFormat, v2)
+			assertEqual(t, item.LongFormat, v2)
 		}
 	}
 }
@@ -104,7 +122,9 @@ func TestPersonnummerError(t *testing.T) {
 
 		for _, format := range availableListFormats {
 			_, err := Parse(item.Get(format))
-			assert.NotNil(t, err)
+			if err == nil {
+				t.Errorf("expected error for %s", item.Get(format))
+			}
 		}
 	}
 }
@@ -117,8 +137,8 @@ func TestPersonnummerSex(t *testing.T) {
 
 		for _, format := range availableListFormats {
 			p, _ := Parse(item.Get(format))
-			assert.Equal(t, item.IsMale, p.IsMale())
-			assert.Equal(t, item.IsFemale, p.IsFemale())
+			assertEqual(t, item.IsMale, p.IsMale())
+			assertEqual(t, item.IsFemale, p.IsFemale())
 		}
 	}
 }
@@ -138,7 +158,7 @@ func TestPersonnummerDate(t *testing.T) {
 			nDay = nDay - 60
 			day = fmt.Sprintf("%02d", nDay)
 			p, _ := Parse(item.SeparatedLong)
-			assert.Equal(t, true, p.IsCoordinationNumber())
+			assertEqual(t, true, p.IsCoordinationNumber())
 		}
 
 		tt, _ := time.Parse("2006-01-02", fmt.Sprintf("%s-%s-%s", year, month, day))
@@ -149,7 +169,9 @@ func TestPersonnummerDate(t *testing.T) {
 			}
 
 			p, _ := Parse(item.Get(format))
-			assert.Equal(t, tt, p.GetDate())
+			if got := p.GetDate(); !got.Equal(tt) {
+				t.Errorf("expected %v, got %v", tt, got)
+			}
 		}
 	}
 }
@@ -169,11 +191,11 @@ func TestPersonnummerAge(t *testing.T) {
 			nDay = nDay - 60
 			day = fmt.Sprintf("%02d", nDay)
 			p, _ := Parse(item.SeparatedLong)
-			assert.Equal(t, true, p.IsCoordinationNumber())
+			assertEqual(t, true, p.IsCoordinationNumber())
 		}
 
 		tt, _ := time.Parse("2006-01-02", fmt.Sprintf("%s-%s-%s", year, month, day))
-		a := math.Floor(float64(now().Sub(tt)/1e6) / 3.15576e+10)
+		a := int(math.Floor(float64(now().Sub(tt)/1e6) / 3.15576e+10))
 
 		for _, format := range availableListFormats {
 			if format == "short_format" {
@@ -181,7 +203,7 @@ func TestPersonnummerAge(t *testing.T) {
 			}
 
 			p, _ := Parse(item.Get(format))
-			assert.Equal(t, a, p.GetAge())
+			assertEqual(t, a, p.GetAge())
 		}
 	}
 }
@@ -199,10 +221,10 @@ func TestInterimNumbers(t *testing.T) {
 
 			p, _ := New(item.Get(format), &Options{AllowInterimNumber: true})
 			v1, _ := p.Format()
-			assert.Equal(t, item.SeparatedFormat, v1)
+			assertEqual(t, item.SeparatedFormat, v1)
 
 			v2, _ := p.Format(true)
-			assert.Equal(t, item.LongFormat, v2)
+			assertEqual(t, item.LongFormat, v2)
 		}
 	}
 }
@@ -219,20 +241,22 @@ func TestInterimNumbersInvalid(t *testing.T) {
 			}
 
 			_, err := New(item.Get(format), &Options{AllowInterimNumber: true})
-			assert.NotNil(t, err)
+			if err == nil {
+				t.Errorf("expected error for %s", item.Get(format))
+			}
 		}
 	}
 }
 
 func TestLuhn(t *testing.T) {
-	assert.True(t, luhn([]byte("1212121212")))
-	assert.False(t, luhn([]byte("12120111X3")))
+	assertEqual(t, true, luhn([]byte("1212121212")))
+	assertEqual(t, false, luhn([]byte("12120111X3")))
 }
 
 func TestInvalidLengths(t *testing.T) {
 	numbers := []string{"", "1", "12", "123", "1234", "12345", "123456", "12345678", "123456789", "1234567891", "12345678911", "123456789111", "1234567891111"}
 	for _, n := range numbers {
-		assert.False(t, Valid(n))
+		assertEqual(t, false, Valid(n))
 	}
 }
 
